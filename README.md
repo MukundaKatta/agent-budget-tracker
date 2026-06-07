@@ -29,7 +29,7 @@ tracker.record(BudgetCategory.USD_COST,   0.02, description="turn 1 cost")
 tracker.record(BudgetCategory.API_CALLS,  1)
 
 print(tracker.summary())
-# {'tokens_in': 1200, 'tokens_out': 340, 'usd_cost': 0.02, 'api_calls': 1}
+# {'tokens_in': 1200.0, 'tokens_out': 340.0, 'usd_cost': 0.02, 'api_calls': 1.0}
 print(tracker.remaining(BudgetCategory.USD_COST))
 # 0.98
 ```

@@ -231,6 +231,41 @@ def test_is_over_budget_no_limit():
     assert not tracker.is_over_budget(BudgetCategory.TOKENS_IN)
 
 
+def test_is_over_budget_true_specific():
+    # An exceeded limit is only reachable without raising via cap mode or
+    # restoration; build the state directly to exercise the True branches.
+    tracker = BudgetTracker.from_dict(
+        {
+            "limits": {"usd_cost": 1.0},
+            "raise_on_exceed": True,
+            "entries": [{"category": "usd_cost", "amount": 2.0}],
+        }
+    )
+    assert tracker.is_over_budget(BudgetCategory.USD_COST)
+
+
+def test_is_over_budget_true_any():
+    tracker = BudgetTracker.from_dict(
+        {
+            "limits": {"usd_cost": 1.0, "api_calls": 10.0},
+            "raise_on_exceed": True,
+            "entries": [{"category": "usd_cost", "amount": 2.0}],
+        }
+    )
+    # api_calls is under limit, usd_cost is over -> any() should be True.
+    assert tracker.is_over_budget()
+
+
+def test_is_over_budget_at_exact_limit_is_false():
+    tracker = BudgetTracker(
+        limits={BudgetCategory.USD_COST: 1.0}, raise_on_exceed=False
+    )
+    tracker.record(BudgetCategory.USD_COST, 0.6)
+    tracker.record(BudgetCategory.USD_COST, 0.6)  # capped to 0.4, total == 1.0
+    assert tracker.total(BudgetCategory.USD_COST) == pytest.approx(1.0)
+    assert not tracker.is_over_budget()
+
+
 # ---------------------------------------------------------------------------
 # BudgetTracker — limit enforcement
 # ---------------------------------------------------------------------------
@@ -278,6 +313,24 @@ def test_limit_for():
     tracker = BudgetTracker(limits={BudgetCategory.USD_COST: 2.50})
     assert tracker.limit_for(BudgetCategory.USD_COST) == pytest.approx(2.50)
     assert tracker.limit_for(BudgetCategory.TOKENS_IN) is None
+
+
+def test_limit_raises_for_string_category():
+    tracker = BudgetTracker(limits={"my_metric": 5.0})
+    tracker.record("my_metric", 4.0)
+    with pytest.raises(BudgetExceededError) as exc_info:
+        tracker.record("my_metric", 2.0)
+    assert exc_info.value.category == "my_metric"
+
+
+def test_string_and_enum_categories_share_totals():
+    # BudgetCategory subclasses str, so "tokens_in" and the enum coincide.
+    tracker = BudgetTracker()
+    tracker.record(BudgetCategory.TOKENS_IN, 10)
+    tracker.record("tokens_in", 5)
+    assert tracker.total(BudgetCategory.TOKENS_IN) == pytest.approx(15.0)
+    assert tracker.total("tokens_in") == pytest.approx(15.0)
+    assert len(tracker.entries("tokens_in")) == 2
 
 
 # ---------------------------------------------------------------------------

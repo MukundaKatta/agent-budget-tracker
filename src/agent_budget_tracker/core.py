@@ -20,7 +20,7 @@ Example::
     tracker.record(BudgetCategory.API_CALLS,  1)
 
     print(tracker.summary())
-    # {'tokens_in': 1200, 'tokens_out': 340, 'usd_cost': 0.02, 'api_calls': 1}
+    # {'tokens_in': 1200.0, 'tokens_out': 340.0, 'usd_cost': 0.02, 'api_calls': 1.0}
 """
 
 from __future__ import annotations
